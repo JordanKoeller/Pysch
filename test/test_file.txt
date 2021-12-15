@@ -1,0 +1,6 @@
+drwxr-xr-x 5 jordan jordan 4096 Dec 13 23:49 .
+drwxr-xr-x 8 jordan jordan 4096 Dec 11 18:07 ..
+drwxr-xr-x 6 jordan jordan 4096 Dec 11 18:55 .git
+-rw-r--r-- 1 jordan jordan 4215 Dec 11 18:06 README.md
+drwxr-xr-x 6 jordan jordan 4096 Dec 13 23:57 pysh
+drwxr-xr-x 3 jordan jordan 4096 Dec 14 01:38 test
