@@ -3,28 +3,28 @@ from __future__ import annotations
 import subprocess
 import os
 
-from typing import List, Dict, Iterator, Optional
+from typing import List, Dict, Iterator, Optional, Tuple
 
 
 class ShellCommand:
 
-    def __init__(self, executable: str, *args: List[str]):
-        self.executable = executable
-        self.arguments = args
+    def __init__(self, cmd: str):
+        self.run_args = [
+            "bash", "-c", f'{cmd}'
+        ]
+        # self.run_args: List[str] = [executable, *args]
 
-    def exec(self, extra_environ: Optional[Dict[str, str]] = None) -> ShellCommandOutput:
-        print(self.executable, self.arguments)
-        result = subprocess.run(
-            executable=self.executable,
-            args=self.arguments,
-            stdout=subprocess.PIPE,
-            env={
-                **os.environ,
-                **(extra_environ if extra_environ else {})
-            }
-        )
+
+    def exec(self, **extra_environ: str) -> ShellCommandOutput:
+        result = subprocess.run(self.run_args,
+                                stdout=subprocess.PIPE,
+                                env={
+                                    **os.environ,
+                                    **(extra_environ if extra_environ else {})
+                                }
+                                )
         print("Finished shell command")
-        return ShellCommandOutput(result.stdout, result.returncode)
+        return ShellCommandOutput(str(result.stdout, 'utf-8'), result.returncode)
 
 
 class ShellCommandOutput:
@@ -55,10 +55,13 @@ class ShellCommandOutput:
     def __iter__(self) -> Iterator[str]:
         return iter(self._split_tokens())
 
+    def __str__(self) -> str:
+        return f'<STDOUT value={self.value} code={self.code} >'
+
     def _split_tokens(self) -> List[str]:
         ret = []
         in_quotes = None
-        accumulator = []
+        accumulator: List[str] = []
         for char in self.value:
             if _whitespace(char) and not in_quotes and accumulator:
                 ret.append(''.join(accumulator))

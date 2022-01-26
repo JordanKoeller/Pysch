@@ -1,15 +1,32 @@
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Optional, Any, Tuple, cast
 from enum import Enum
 
 class Primatives(Enum):
+    Unknown = -1
     String = 0
     Int = 1
     Float = 2
     Bool = 3
     Array = 4
     Dict = 5
+    Function = 6
+
+    @classmethod
+    def getType(cls, value) -> Primatives:
+        if isinstance(value, str):
+            return cls.String
+        if isinstance(value, bool):
+            return cls.Bool
+        if isinstance(value, int):
+            return cls.Int
+        if isinstance(value, float):
+            return cls.Float
+        if callable(value):
+            return cls.Function
+        return cls.Unknown
+
 
     def __eq__(self, o: Any):
       return type(self) == type(o) and self.value == o.value
@@ -17,8 +34,8 @@ class Primatives(Enum):
     def __str__(self):
       return f'{self.name}'
 
-DATUM_PRIMATIVES = [Primatives.String, Primatives.Int, Primatives.Float, Primatives.Bool]
-DATUM_COLLECTIONS = [Primatives.Array, Primatives.Dict]
+DATUM_PRIMATIVES = [Primatives.String, Primatives.Int, Primatives.Float, Primatives.Bool, Primatives.Unknown]
+DATUM_COLLECTIONS = [Primatives.Array, Primatives.Dict, Primatives.Function]
 
 class UserType:
     def __init__(self, primary_type: Primatives, secondary_type: Optional[Primatives] = None):
@@ -35,15 +52,34 @@ class UserType:
                     f"Incomplete secondary type {secondary_type} for primary type {primary_type}")
             self.secondary_type = secondary_type
 
-    def __eq__(self, o: UserType) -> bool:
-        return self.primary_type == o.primary_type and self.secondary_type == o.secondary_type
+    @classmethod
+    def factory(cls, value: Any) -> UserType:
+        if isinstance(value, list):
+            if len(value) == 0:
+                return UserType(Primatives.Array, Primatives.Unknown)
+            else:
+                return UserType(Primatives.Array, Primatives.getType(value[0]))
+        if isinstance(value, dict):
+            if len(value) == 0:
+                return UserType(Primatives.Dict, Primatives.Unknown)
+            for k, v in value.items():
+                return UserType(Primatives.Dict, Primatives.getType(k))
+        return UserType(Primatives.getType(value))
+
+    def __eq__(self, o: object) -> bool:
+        return type(o) == UserType and self.primary_type == o.primary_type and self.secondary_type == o.secondary_type
 
     def __str__(self):
-      if self.is_collection():
-        return f'{self.primary_type}[{self.secondary_type}]'
-      return f'{self.primary_type}'
+        if self.is_collection():
+            return f'{self.primary_type}[{self.secondary_type}]'
+        return f'{self.primary_type}'
 
-    def as_tuple(self) -> (Primatives, Optional[Primatives]):
+    def __repr__(self):
+        if self.is_collection():
+            return f'{self.primary_type}[{self.secondary_type}]'
+        return f'{self.primary_type}'
+
+    def as_tuple(self) -> Tuple[Primatives, Optional[Primatives]]:
         return (self.primary_type, self.secondary_type)
 
     def convertable(self, other: UserType) -> bool:
@@ -99,8 +135,8 @@ class UserValue:
             return bool(self.value)
 
     def _convert_collection(self, other_type: UserType):
-        element_type = UserType(self.value_type.secondary_type)
-        dest_type = UserType(other_type.secondary_type)
+        element_type = UserType(cast(Primatives, self.value_type.secondary_type))
+        dest_type = UserType(cast(Primatives, other_type.secondary_type))
         if other_type.primary_type == Primatives.Array:
             return UserValue([
                 UserValue(elem, element_type).convert_type(dest_type).value
@@ -113,5 +149,5 @@ class UserValue:
             }, other_type)
 
     def __str__(self):
-      return f'<{self.value}: {self.value_type}>'
+        return f'<{self.value}: {self.value_type}>'
         
